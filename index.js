@@ -5,17 +5,7 @@ var r = require('rethinkdb');
 var server = require('http').Server(app);
 var io = require('socket.io')(server);
 
-var dbName = 'trafixdb';
-var config = {
-  rethinkdb: {
-    host: 'localhost',
-    port: 28015,
-    db: dbName
-  },
-  port: 8000,
-  sockPort: 8001
-};
-var tableName = 'status';
+var config = require(__dirname + '/config.js').config();
 
 var port = process.env.PORT || config.port;
 
@@ -27,19 +17,19 @@ function handleError(err) {
 }
 
 function createTable(conn) {
-  if (!r.tableList().contains(tableName)) {
-    return r.tableCreate(tableName)
+  if (!r.tableList().contains(config.rethinkdb.table)) {
+    return r.tableCreate(config.rethinkdb.table)
       .run(conn);
   } else {
-    return r.table(tableName)
+    return r.table(config.rethinkdb.table)
       .run(conn);
   }
 }
 
 function watchChanges() {
-  r.connect(config.rethinkdb)
+  r.connect(config.rethinkdb.connection)
     .then(function(conn) {
-      r.table(tableName)
+      r.table(config.rethinkdb.table)
         .changes()
         .run(conn, function(err, cursor) {
           cursor.each(function(err, change) {
@@ -51,7 +41,7 @@ function watchChanges() {
 }
 
 function createDB(conn) {
-  return r.dbCreate(dbName)
+  return r.dbCreate(config.rethinkdb.connection.db)
     .run(conn)
 }
 
@@ -77,9 +67,9 @@ router.get('/', function(req, res) {
 // add a status
 router.route('/status')
   .post(function(req, res) {
-    r.connect(config.rethinkdb)
+    r.connect(config.rethinkdb.connection)
       .then(function(conn) {
-        r.table(tableName)
+        r.table(config.rethinkdb.table)
           .insert(req.body)
           .run(conn);
       })
@@ -97,12 +87,10 @@ io.on('connection', function(socket) {
   console.log(socket.id + ' connected!');
 });
 
-r.connect(config.rethinkdb)
-  .then(function(conn) {
-    return createTable(conn);
-  })
+r.connect(config.rethinkdb.connection)
+  .then(createTable)
   .then(function() {
-    console.log('RethinkDB database ' + config.rethinkdb.db + ' running on port ' + config.rethinkdb.port);
+    console.log('RethinkDB database ' + config.rethinkdb.connection.db + ' running on port ' + config.rethinkdb.connection.port);
     watchChanges();
     startServer();
   })
