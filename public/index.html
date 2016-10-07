@@ -1,0 +1,17 @@
+<html>
+  <head>
+    <title>Traffic Status</title>
+    <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+    <script type="text/javascript">
+      var socket = io.connect('http://localhost:8001');
+      socket.on('status', function(data) {
+        var screen = document.querySelector('#output');
+        screen.innerHTML = screen.innerHTML + '<br/>' + JSON.stringify(data);
+      });
+    </script>
+  </head>
+  <body>
+    <h3>TRAFFIC DATA</h3>
+    <div id="output"></div>
+  </body>
+</html>
